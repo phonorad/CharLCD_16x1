@@ -155,7 +155,8 @@ class Character_LCD:
         # Initialise display control
         self.displaycontrol = _LCD_DISPLAYON | _LCD_CURSOROFF | _LCD_BLINKOFF
         # Initialise display function
-        self.displayfunction = _LCD_4BITMODE | _LCD_1LINE | _LCD_2LINE | _LCD_5X8DOTS
+        #self.displayfunction = _LCD_4BITMODE | _LCD_1LINE | _LCD_2LINE | _LCD_5X8DOTS
+        self.displayfunction = _LCD_4BITMODE | _LCD_2LINE | _LCD_5X8DOTS
         # Initialise display mode
         self.displaymode = _LCD_ENTRYLEFT | _LCD_ENTRYSHIFTDECREMENT
         # Write to displaycontrol
@@ -359,7 +360,7 @@ class Character_LCD:
         # Track times through iteration, to act on the initial character of the message
         initial_character = 0
         # iterate through each character
-        for character in message:
+        for count, character in enumerate(message):
             # If this is the first character in the string:
             if initial_character == 0:
                 # Start at (0, 0) unless direction is set right to left, in which case start
@@ -367,30 +368,40 @@ class Character_LCD:
                 # If cursor_position is set then starts at the specified location for
                 # LEFT_TO_RIGHT. If RIGHT_TO_LEFT cursor_position is determined from right.
                 # allows for cursor_position to work in RIGHT_TO_LEFT mode
-                if self.displaymode & _LCD_ENTRYLEFT > 0:
-                    col = self.column
-                else:
-                    col = self.columns - 1 - self.column
-                self.cursor_position(col, line)
-                initial_character += 1
-            # If character is \n, go to next line
-            if character == "\n":
-                line += 1
-                # Start the second line at (0, 1) unless direction is set right to left in
-                # which case start on the opposite side of the display if cursor_position
-                # is (0,0) or not set. Start second line at same column as first line when
-                # cursor_position is set
-                if self.displaymode & _LCD_ENTRYLEFT > 0:
-                    col = self.column * self._column_align
-                else:
-                    if self._column_align:
-                        col = self.column
-                    else:
-                        col = self.columns - 1
-                self.cursor_position(col, line)
-            # Write string to display
+                   if self.displaymode & _LCD_ENTRYLEFT > 0:
+                       col = self.column
+                   else:
+                       col = ((int(self.columns/2) - 1 - self.column))
+                       line += 1
+                   self.cursor_position(col, line)
+                   self._write8(ord(character), True)
+                   initial_character += 1
+            # If this is 8th character, output this one and then go to 0x40 for next 8 characters
+                #if self.displaymode & _LCD_ENTRYLEFT > 0:
             else:
-                self._write8(ord(character), True)
+                if count == 7 and self.displaymode & _LCD_ENTRYLEFT > 0:
+                   line += 1
+                   col = 0
+                   self._write8(ord(character), True)
+                   self.cursor_position(col,line)
+                else:
+                   if count == 7 and self.displaymode & _LCD_ENTRYLEFT == 0:
+                      line -= 1
+                      col = 7
+                      self._write8(ord(character), True)
+                      self.cursor_position(col,line)
+                   else:
+                      self._write8(ord(character), True)
+                #else:
+                   #if count == 7:  
+                      #line -= 1
+                      #col = 7
+                      #self._write8(ord(character), True)
+                      #self.cursor_position(col, line)
+                #self._write8(ord(character), True)
+            # Write string to display
+            #else:
+               #self._write8(ord(character), True)
         # reset column and row to (0,0) after message is displayed
         self.column, self.row = 0, 0
 
